@@ -1,28 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <SQL>
   <Databases>
-    <MDF>G:\Database1_data</MDF>
-    <LDF>G:\Database1_log</LDF>
-    <DB_Name>AdventureWorks_DB1</DB_Name>
+    <MDF>G:\MSSQL\Data\SalesDBData</MDF>
+    <LDF>G:\MSSQL\Logs\SalesDBLog</LDF>
+    <DB_Name>SalesDB</DB_Name>
   </Databases>
   <Databases>
-    <MDF>H:\Database2_data</MDF>
-    <LDF>H:\Database2_log</LDF>
-    <DB_Name>AdventureWorks_DB2</DB_Name>
-  </Databases>
-  <Databases>
-    <MDF>I:\Database3_data</MDF>
-    <LDF>I:\Database3_log</LDF>
-    <DB_Name>AdventureWorks_DB3</DB_Name>
-  </Databases>
-  <Databases>
-    <MDF>J:\Database4_data</MDF>
-    <LDF>J:\Database4_log</LDF>
-    <DB_Name>AdventureWorks_DB4</DB_Name>
-  </Databases>
-  <Databases>
-    <MDF>K:\Database5_data</MDF>
-    <LDF>K:\Database5_log</LDF>
-    <DB_Name>AdventureWorks_DB5</DB_Name>
+    <MDF>G:\MSSQL\Data\TEST</MDF>
+    <LDF>G:\MSSQL\Logs\TEST_log</LDF>
+    <DB_Name>TEST</DB_Name>
   </Databases>
 </SQL>
