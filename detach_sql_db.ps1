@@ -1,7 +1,7 @@
 #
 # Load configuration XML file.
 #
-[xml]$databases = Get-Content "\\MSFT-INFRA-01\Script Library\AttachDatabasesConfig.xml"
+[xml]$databases = Get-Content ".\AttachDatabasesConfig.xml"
 
 #
 # Get SQL Server database (MDF/LDF).
@@ -23,6 +23,6 @@ GO
 sp_detach_db $DBName
 GO
 "@
-    Invoke-Sqlcmd $attachSQLCMD -QueryTimeout 3600 -ServerInstance 'MSFT-DEMOBOX-01\PURE1'
+    Invoke-Sqlcmd $attachSQLCMD -QueryTimeout 3600 -ServerInstance 'WIN-GVMFM7PE61V'
 
 }
