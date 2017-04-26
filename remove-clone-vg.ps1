@@ -7,8 +7,8 @@
 # 
 ##########################################################
 #Environmentals - Set these for your environment
-$ntnx_cluster_ip = "10.21.9.37"
-$ntnx_cluster_data_ip = "10.21.9.38"
+$ntnx_cluster_ip = "172.16.10.96"
+$ntnx_cluster_data_ip = "172.16.10.97"
 $ntnx_user_name = "admin"
 $ntnx_user_password_clear = read-host -prompt "password"
 $ntnx_user_password = $ntnx_user_password_clear | ConvertTo-SecureString -AsPlainText -Force
@@ -34,7 +34,7 @@ connect-ntnxcluster -server $ntnx_cluster_ip -username $ntnx_user_name -password
 
 # Attach ISCSI Client to VG
 # Grab the ip for the the localhost using Ethernet0 and IPv4 filters
-$vmip = (get-netipaddress | where {$_.InterfaceAlias -eq "Ethernet0" -and $_.AddressFamily -eq "IPv4"}).IPAddress
+$vmip = (get-netipaddress | where {$_.InterfaceAlias -eq "Ethernet" -and $_.AddressFamily -eq "IPv4"}).IPAddress
 #Get Cloned VG details
 $ntnx_clonedvg_uuid = (Get-NTNXVolumeGroups | where {$_.name -ceq "$ntnx_vg_prefix" + "$ntnx_vg_name"}).uuid
 #Add client to Cloned VG
