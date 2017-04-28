@@ -1,13 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <SQL>
   <Databases>
-    <MDF>G:\MSSQL\Data\SalesDBData</MDF>
-    <LDF>G:\MSSQL\Logs\SalesDBLog</LDF>
-    <DB_Name>SalesDB</DB_Name>
-  </Databases>
-  <Databases>
-    <MDF>G:\MSSQL\Data\TEST</MDF>
-    <LDF>G:\MSSQL\Logs\TEST_log</LDF>
-    <DB_Name>TEST</DB_Name>
+    <MDF>G:\data\AdventureWorks2014</MDF>
+    <LDF>G:\data\AdventureWorks2014_0</LDF>
+    <DB_Name>AdventureWorks2014</DB_Name>
   </Databases>
 </SQL>

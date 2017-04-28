@@ -1,34 +1,51 @@
 ﻿####################################################################################################################
-# clone-vg.psq
+# clone-vg.ps1 <create|remove> <attach|detach>
 # Created By: Ryan Grendahl
 # Created Date: 4/5/2017
 ####################################################################################################################
 # Description: Designed to be used by Nutanix customers with ESXi using volume group cloning
 # to quickly populate a test /dev SQL instance with cloned version of a production database
-# Modified Date: 4/26/2017
+# Modified Date: 4/28/2017
 # Script has been modified to handle ESXi or AHV (by connecting volume groups via inguest iSCSI.
 # to leverage with AHV and direct attached VGs we can simplify the code, future date.
 # NEXT UP
 # - more intelligence on monitoring the clone task on NTNX before doing REST call for client ip
 # - Credential handling
 # - testing of script required permissions on windows
-# - Integration automation of SQL, drive letter persistence, etc
+# - ####################################################################################################################
+# Assumptions / Pre-Reqs
+# - Production SQL instance on nutanix using volume group(s) for mdb/ldfs
+# - Separate SQL instance running on the same cluster with SQL binaries, system dbs running on nutanix
+# - Protection domain with production SQL vm and volume group with active snapshot schedule in place
+# - XML file AttachDatabasesConfig.xml populated with known drive letters and located in same dir as clone-vg.ps1
+# Usage: 
+# .\clone-vg.ps1 create : restores production vg snapshot and presents storage to host via iscsi
+# .\clone-vg.ps1 create attach : does same as above and attaches SQL db's referenced in XML file
+# .\clone-vg.ps1 remove : removes volume group from host
+# .\clone-vg.psq remove detach : detaches SQL db's referenced in XML file then removes volume group
 ####################################################################################################################
 
 param 
 		(  		
 			[Parameter(Position=0, Mandatory=$true)] 
             [ValidateSet('create','remove')] 
-			[string] $action
+			[string] $action,
+            
+            [Parameter(Position=1, Mandatory=$false)] 
+            [ValidateSet('attach','detach')] 
+			[string] $db_action
 		) 
 
+# SQL Reference Data
+    [xml]$databases = Get-Content ".\AttachDatabasesConfig.xml"
+    $sql_instance_name = hostname
 
-
-#Environmentals - Set these for your environment
+# Environmentals - Set these for your environment
     $ntnx_cluster_ip = "172.16.10.96"
     $ntnx_cluster_data_ip = "172.16.10.97"
     $ntnx_user_name = "admin"
-    $ntnx_user_password_clear = read-host -prompt "enter password"
+	$ntnx_user_password_clear = read-host "Enter Password"
+    #$creds = New-Object System.Management.Automation.PSCredential ($ntnx_user_name,$ntnx_user_password)
     $ntnx_user_password = $ntnx_user_password_clear | ConvertTo-SecureString -AsPlainText -Force
     $ntnx_pd_name= "sql"
     $ntnx_vg_name = "vg_prodsql"
@@ -224,7 +241,7 @@ if($action -eq "create")
         }
     if($iscsi_targets | where {$_.IsConnected -eq $false})
         {
-            Write-CustomCombo "iSCSI: Connecting Targets"
+            Write-CustomCombo "MSiSCSI: Connecting Targets"
             $iscsi_targets | connect-iscsitarget -IsPersistent $true | out-null
         }
 
@@ -241,11 +258,72 @@ if($action -eq "create")
             Write-CustomCombo "MSiSCSI: Devices set to Persistent and Not ReadOnly" 
             $iscsi_session_disks | get-disk | set-disk -IsReadonly $false
         }
+
+    if($db_action -eq "attach")
+    {
+        Write-CustomCombo "SQL: db action set to $db_action, attaching database(s)"
+        Add-PSSnapin SqlServerCmdletSnapin* -ErrorAction SilentlyContinue
+                If (!$?)
+                    {
+                        Import-Module SQLPS -WarningAction SilentlyContinue
+                    }
+                if(!$?)
+                    {
+                        Write-CustomCombo "SQL: Error loading Microsoft SQL Server PowerShell module. Please check if it is installed."; Exit
+                    }
+                #
+                # Get SQL Server database (MDF/LDF).
+                #
+                ForEach ($database in $databases.SQL.Databases)
+                        {
+                            $mdfFilename = $database.MDF
+                            $ldfFilename = $database.LDF
+                            $DBName = $database.DB_Name
+                            Write-CustomCombo "SQL: Attaching $dbname"
+                
+$attachSQLCMD = @"
+USE [master]
+GO
+CREATE DATABASE [$DBName] ON (FILENAME = '$mdfFilename.mdf'),(FILENAME = '$ldfFilename.ldf') for ATTACH
+GO
+"@ 
+    Invoke-Sqlcmd $attachSQLCMD -QueryTimeout 3600 -ServerInstance $sql_instance_name
+                
+                }
+    }
     }
 #endregion
 #region REMOVE
 Elseif($action -eq "remove")
     {
+    if($db_action -eq "detach")
+    {
+        Write-CustomCombo "SQL: Db action set to $db_action, detaching database(s)"
+         Add-PSSnapin SqlServerCmdletSnapin* -ErrorAction SilentlyContinue
+            if(!$?)
+                {
+                    Import-Module SQLPS -WarningAction SilentlyContinue
+                }
+            if(!$?)
+                {
+                    Write-CustomCombo "SQL: Error loading Microsoft SQL Server PowerShell module. Please check if it is installed."; Exit
+                }
+        ForEach ($database in $databases.SQL.Databases) 
+        {
+            $mdfFilename = $database.MDF
+            $ldfFilename = $database.LDF
+            $DBName = $database.DB_Name
+            Write-CustomCombo "SQL: Detaching database $dbname"
+        
+        $attachSQLCMD = @"
+USE [master]
+GO
+sp_detach_db $DBName
+GO
+"@
+    Invoke-Sqlcmd $attachSQLCMD -QueryTimeout 3600 -ServerInstance $sql_instance_name
+        }
+    }
     # Set disks offline
     Write-CustomCombo "MSiSCSI: Checking for Offline or Readonly" 
     $iscsi_session_disks = get-iscsisession | get-disk  | where {(($_.UniqueId).Split(":")[1].Split("-")[0]) -eq $iscsi_target_ident_string}
@@ -262,16 +340,16 @@ Elseif($action -eq "remove")
 
     if(! $iscsi_targets)
         {
-            Write-CustomCombo "iSCSI: No Targets found matching $iscsi_target_ident_string, check for unhandled characters";exit
+            Write-CustomCombo "MSiSCSI: No Targets found matching $iscsi_target_ident_string, check for unhandled characters";exit
         }
     if($iscsi_targets | where {$_.IsConnected -eq $true})
         {
-            Write-CustomCombo "iSCSI: Disconnecting targets for $iscsi_target_ident_string"
+            Write-CustomCombo "MSiSCSI: Disconnecting targets for $iscsi_target_ident_string"
             $iscsi_targets | disconnect-iscsitarget -confirm:$false | out-null
         }
 
 
-        # Attach ISCSI Client to VG
+        # Detach ISCSI Client from VG
         # Grab the ip for the the localhost using Ethernet0 and IPv4 filters
         $vmip = (get-netipaddress | where {$_.InterfaceAlias -eq "Ethernet" -and $_.AddressFamily -eq "IPv4"}).IPAddress
         #Get Cloned VG details
@@ -304,7 +382,7 @@ Elseif($action -eq "remove")
         Else
             {
                 Write-CustomCombo "NTNX: Removing volume group $ntnx_test_vg"
-                Delete-NTNXVolumeGroup -Uuid ($ntnx_test_vg.uuid)
+                Delete-NTNXVolumeGroup -Uuid ($ntnx_test_vg.uuid) | out-null
             }
 
         Disconnect-NTNXCluster -Servers * | out-null
