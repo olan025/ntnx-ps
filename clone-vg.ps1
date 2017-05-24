@@ -1,4 +1,5 @@
 ﻿####################################################################################################################
+# © 2017 Nutanix, Inc
 # clone-vg.ps1 <create|remove> <attach|detach>
 # Created By: Ryan Grendahl
 # Created Date: 4/5/2017
