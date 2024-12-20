@@ -1,5 +1,6 @@
 $master_report = @()
-$vcenter = "PBVCENT510"
+#modifythis line for the vCenter instance name
+$vcenter = "<vCenterName>"
 $vCenter_vinfo_file =  (ls *vInfo* ).Name
 $vcenter_hwInfo_file = (ls *tabvHost*).Name
 $vCenter_vInfo_data = ipcsv $vCenter_vInfo_File
